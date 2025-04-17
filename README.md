@@ -14,12 +14,12 @@ The MQTT transport protocol supports all the features of MCP and adds the follow
 
 - **Built-in Service Registry and Discovery**: MCP clients can discover available MCP servers from the MQTT broker.
 
-- **Built-in Load Balancing and Scalability**: MCP Servers can be scaled horizontally by adding more MCP server instances, while keeping the the MCP server side stateful.
+- **Built-in Load Balancing and Scalability**: MCP servers can be scaled horizontally by adding more MCP server instances, while keeping the the MCP server side stateful.
 
 Additionally, by setting access control permissions on the MQTT topics used by MCP clients and servers in the MQTT broker, authorization for clients and servers can be very flexibly implemented.
 
 ## Limitations
 
-MCP over MQTT is designed for remotely deployed MCP Servers, and the protocol requires a centralized MQTT broker to function. Although locally deployed MCP Servers can also use the MCP over MQTT, it may introduce additional deployment complexity.
+MCP over MQTT is designed for remotely deployed MCP servers, and the protocol requires a centralized MQTT broker to function. Although locally deployed MCP servers can also use the MCP over MQTT, it may introduce additional deployment complexity.
 
 We are not meant to replace the existing MCP transport layers (stdio and HTTP SSE), but to provide an alternative for edge computing and IoT applications, and for the backend services that want to use MQTT as their messaging protocol.

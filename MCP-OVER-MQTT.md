@@ -105,7 +105,7 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
   Multiple connections with the same `server-name` are considered multiple instances of the same MCP server and provide exactly the same service. When the MCP client sends an initialize message, it should select one of them according to a client-side determined strategy.
 
-  Multiple MCP Servers with different `server-name`s may still provide similar functions. In this case, when the client sends an initialize message, it should select one of them to establish a connection as needed. The selection criteria can be based on the client's permissions, recommendations from a LLM, or the user's choice.
+  Multiple MCP servers with different `server-name`s may still provide similar functions. In this case, when the client sends an initialize message, it should select one of them to establish a connection as needed. The selection criteria can be based on the client's permissions, recommendations from a LLM, or the user's choice.
 
   After connected to the MQTT broker, the broker may suggest a `server-name` to the MCP server by including a `MCP-SERVER-NAME` user property in the MQTT CONNECT message. If so, the MCP server **MUST** use this `server-name` as its server name. If the broker does not suggest a `server-name`, the MCP server **SHOULD** use a default `server-name` based on the functionality it provides.
 
@@ -170,7 +170,7 @@ The Client ID of the MCP server can be any string except `/`, `+` and `#`, refer
 
 ### MCP Client
 
-The Client ID of the MCP Client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
+The Client ID of the MCP client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
 
 ## MQTT Topics and Topic Filters
 
@@ -192,7 +192,7 @@ The Client ID of the MCP Client, referred to as `mcp-client-id`, can be any stri
 | Topic Name                                                             | Messages                                                                                               |
 |------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
 | `$mcp-server/capability/list-changed/{server-id}/{server-name}`     | capability list changed notification.                                                                  |
-| `$mcp-server/presence/{server-id}/{server-name}`                    | Presence messages for the MCP Server. <br> See [ServiceDiscovery](#service-discovery) for more details |
+| `$mcp-server/presence/{server-id}/{server-name}`                    | Presence messages for the MCP server. <br> See [ServiceDiscovery](#service-discovery) for more details |
 | `$mcp-server/capability/resource-updated/{server-id}/{server-name}` | Resource update notification.                                                                          |
 | `$mcp-rpc-endpoint/{mcp-client-id}/{server-name}`                     | RPC requests, responses and notifications.                                                             |
 
