@@ -1,97 +1,6 @@
-# Specification
-
-This specification is based on the [MCP 2025-03-26 (Latest)](https://spec.modelcontextprotocol.io/specification/2025-03-26/), with additional details about the MQTT transport layer, see [MQTT Transport](/mcp/specification/2025-03-26/basic/mqtt_transport.md).
-
-# Architecture
-
-## Core Components of the MQTT Transport
-
-MCP over MQTT introduces a centralized MQTT broker, while other components (Hosts, Clients, Servers) remain unchanged.
-
-```mermaid
-graph LR
-    subgraph "Application Host Process"
-        H[Host]
-        C1[Client 1]
-        C2[Client 2]
-        C3[Client 3]
-        H --> C1
-        H --> C2
-        H --> C3
-    end
-
-    subgraph "MQTT Broker"
-        B[Broker]
-        C1 --> B
-        C2 --> B
-        C3 --> B
-    end
-
-    subgraph "Servers"
-        S1[Server A<br>External APIs]
-        R1[("Remote<br>Resource A")]
-        B --> S1
-        S1 <--> R1
-    end
-
-    subgraph "Servers"
-        S2[Server B<br>External APIs]
-        R2[("Remote<br>Resource B")]
-        B --> S2
-        S2 <--> R2
-    end
-```
-
-### Host, Client, and Server
-
-The Host, Client, and Server components remain unchanged:
-
-- The host process acts as the container and coordinator of the clients.
-- Each client is created by the host and maintains an isolated server connection.
-- Servers provide specialized context and capabilities.
-
-With the exception that the clients and servers communicate with the MQTT broker instead of directly with each other.
-
-See [Core Components](https://spec.modelcontextprotocol.io/specification/2025-03-26/architecture/#core-components)
-
-### MQTT Broker
-
-The MQTT broker acts as a centralized message router:
-- Facilitates communication between clients and servers.
-- Support service discovery and service registration (via retained messages).
-- Authenticates and authorizes clients and servers.
-
-## Server Side Load Balancing and Scalability
-
-To achieve MCP server-side load balancing and scalability, an MCP server can start multiple instances (processes), each using a unique `server-id` as the MQTT Client ID to establish an independent MQTT connection. All instances of an MCP server share the same `server-name`.
-
-The client must first subscribe to the service discovery topic to obtain the list of `server-id`s for a specific `server-name`. Then, based on a client-defined server selection strategy (e.g., random selection or round-robin), it initiates an `initialize` request to one of the `server-id`s. After initialization is complete, the MCP client communicates with the selected MCP server instance on a specific RPC topic.
-
-```mermaid
-graph LR
-
-    C1["MCP Client1"]
-    C2["MCP Client2"]
-    C3["MCP Client3"]
-    C4["MCP Client4"]
-
-    subgraph "MCP Server Instances (server-name-a)"
-        S1[Server Instance 1]
-        S2[Server Instance 2]
-    end
-
-    C1 <-- "RPC topic of client-1 and server instance 1" --> S1
-    C2 <-- "RPC topic of client-2 and server instance 1" --> S1
-    C3 <-- "RPC topic of client-3 and server instance 2" --> S2
-    C4 <-- "RPC topic of client-4 and server instance 2" --> S2
-
-```
-
-This allows us to achieve high availability and scalability on the MCP server side:
-
-- When scaling up, existing MCP clients remain connected to the old server instances, while new MCP clients have the opportunity to initiate initialization requests to the new server instances.
-
-- When scaling down, MCP clients could re-initiate initialization requests to the MCP server, thereby connecting to another server instance.
+---
+title: MQTT Transport
+---
 
 # The MQTT Transport for MCP
 
@@ -105,7 +14,7 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
   Multiple connections with the same `server-name` are considered multiple instances of the same MCP server and provide exactly the same service. When the MCP client sends an initialize message, it should select one of them according to a client-side determined strategy.
 
-  Multiple MCP servers with different `server-name`s may still provide similar functions. In this case, when the client sends an initialize message, it should select one of them to establish a connection as needed. The selection criteria can be based on the client's permissions, recommendations from a LLM, or the user's choice.
+  Multiple MCP Servers with different `server-name`s may still provide similar functions. In this case, when the client sends an initialize message, it should select one of them to establish a connection as needed. The selection criteria can be based on the client's permissions, recommendations from a LLM, or the user's choice.
 
   After connected to the MQTT broker, the broker may suggest a `server-name` to the MCP server by including a `MCP-SERVER-NAME` user property in the MQTT CONNECT message. If so, the MCP server **MUST** use this `server-name` as its server name. If the broker does not suggest a `server-name`, the MCP server **SHOULD** use a default `server-name` based on the functionality it provides.
 
@@ -125,7 +34,7 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
 ## Message Topics
 
-MCP over MQTT transmits messages through MQTT topics. This protocol includes the following message topics:
+MCP over MQTT transmits messages through MQTT topics. This protocol includes the following message topics:  
 
 | Topic Name                       | Topic Name                                                          | Description                                                                        |
 |----------------------------------|---------------------------------------------------------------------|------------------------------------------------------------------------------------|
@@ -170,7 +79,7 @@ The Client ID of the MCP server can be any string except `/`, `+` and `#`, refer
 
 ### MCP Client
 
-The Client ID of the MCP client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
+The Client ID of the MCP Client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
 
 ## MQTT Topics and Topic Filters
 
@@ -192,7 +101,7 @@ The Client ID of the MCP client, referred to as `mcp-client-id`, can be any stri
 | Topic Name                                                             | Messages                                                                                               |
 |------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------|
 | `$mcp-server/capability/list-changed/{server-id}/{server-name}`     | capability list changed notification.                                                                  |
-| `$mcp-server/presence/{server-id}/{server-name}`                    | Presence messages for the MCP server. <br> See [ServiceDiscovery](#service-discovery) for more details |
+| `$mcp-server/presence/{server-id}/{server-name}`                    | Presence messages for the MCP Server. <br> See [ServiceDiscovery](#service-discovery) for more details |
 | `$mcp-server/capability/resource-updated/{server-id}/{server-name}` | Resource update notification.                                                                          |
 | `$mcp-rpc-endpoint/{mcp-client-id}/{server-name}`                     | RPC requests, responses and notifications.                                                             |
 
