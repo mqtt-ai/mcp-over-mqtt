@@ -1,3 +1,7 @@
+---
+title: Python SDK
+---
+
 # Quickstart
 
 ## Create a Demo Project
