@@ -1,0 +1,17 @@
+name: Deploy to AWS Amplify
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Amplify webhook
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d {} \
+            "https://webhooks.amplify.us-west-1.amazonaws.com/prod/webhooks?id=${{ secrets.MQTT_AI_AMPLIFY_ID }}&token=${{ secrets.MQTT_AI_AMPLIFY_TOKEN }}&operation=startbuild"
