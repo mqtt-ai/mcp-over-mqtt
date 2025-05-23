@@ -26,9 +26,9 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
 - **server-name-filter**: The MQTT topic filter to match the `server-name`, it may include `/`, `+` and `#` characters. See descriptions about **server-name** for more details.
 
-- **server-id**: The MQTT Client ID of a MCP server instance. Any string except `/`, `+` and `#`. It must be globally unique and will also be included in the topic. It is recommended to use a hex string UUID.
+- **server-id**: The MQTT Client ID of a MCP server instance. Any string except `/`, `+` and `#`. It must be globally unique and will also be included in the topic.
 
-- **mcp-client-id**: The MQTT Client ID of the client. Any string except `/`, `+` and `#`. It must be globally unique and will be included in the topic. Each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
+- **mcp-client-id**: The MQTT Client ID of the client. Any string except `/`, `+` and `#`. It must be globally unique and will be included in the topic. Each time an initialization request is made, a different client-id must be used.
 
 # MQTT Requirements and Conventions
 
@@ -75,11 +75,11 @@ The session expiry interval **MUST** be set to 0, meaning the session will be cl
 
 ### MCP Server
 
-The Client ID of the MCP server can be any string except `/`, `+` and `#`, referred to as `server-id`. It is recommended to use a hex string UUID.
+The Client ID of the MCP server can be any string except `/`, `+` and `#`, referred to as `server-id`.
 
 ### MCP Client
 
-The Client ID of the MCP client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used. It is recommended to use a hex string UUID.
+The Client ID of the MCP client, referred to as `mcp-client-id`, can be any string except `/`, `+` and `#`, each time an initialization request is made, a different client-id must be used.
 
 ## MQTT Topics and Topic Filters
 
