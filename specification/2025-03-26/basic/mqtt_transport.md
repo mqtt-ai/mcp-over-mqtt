@@ -26,7 +26,7 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
 - **server-name-filter**: The MQTT topic filter to match the `server-name`, it may include `/`, `+` and `#` characters. See descriptions about **server-name** for more details.
 
-  After connected to the MQTT broker, the broker may suggest a `server-name-filter` to the MCP client by including a `MCP-SERVER_NAME-FILTERS` user property in the MQTT CONNACK message. If so, the MCP client **MUST** use this `server-name-filter` to subscribe to the server's presence topic. The value of the `MCP-SERVER_NAME-FILTERS` is a JSON array of strings, each string is a MQTT topic filter.
+  After connected to the MQTT broker, the broker may suggest a `server-name-filter` to the MCP client by including a `MCP-SERVER-NAME-FILTERS` user property in the MQTT CONNACK message. If so, the MCP client **MUST** use this `server-name-filter` to subscribe to the server's presence topic. The value of the `MCP-SERVER-NAME-FILTERS` is a JSON array of strings, each string is a MQTT topic filter.
   If the broker does not suggest a `server-name-filter`, the MCP client **SHOULD** use a default `server-name-filter` based on the functionality it provides.
 
 - **server-id**: The MQTT Client ID of a MCP server instance. Any string except `/`, `+` and `#`. It must be globally unique and will also be included in the topic.
@@ -64,9 +64,9 @@ For `CONNECT` messages, the following user properties **MUST** be set:
 - `MCP-META`: A JSON object containing metadata about the MCP component, such as its version, implementation details, and location. This metadata can be used by the broker to suggest a server name to the MCP server or a server name filter to the MCP client.
 
 For `CONNACK` messages sent by the broker, the following user properties **MAY** be set:
-- `MCP-SERVER-NAME`: The broker suggested server name for the MCP server.
-- `MCP-AUTH-ROLE`: The broker suggested role for the MCP client, which is used for a role-based access control (RBAC) mechanism.
-- `MCP-SERVER_NAME-FILTERS`: The broker suggested server name filters. It's a JSON array of strings, each string is a MQTT topic filter that the MCP client can use to subscribe to the server's presence topic. This allows the client to filter the servers it is interested in based on its permissions or other criteria.
+- `MCP-SERVER-NAME`: The broker suggested server name for the MCP server. Only present if it's a MCP server.
+- `MCP-RBAC`: A JSON array of server names and its corresponding role names, which can be used by the MCP client to determine the roles it has for the MCP server. Each element in the array is a JSON object with two fields: `server_name` and `role_name`. Only present if it's a MCP client.
+- `MCP-SERVER-NAME-FILTERS`: The broker suggested server name filters. It's a JSON array of strings, each string is a MQTT topic filter that the MCP client can use to subscribe to the server's presence topic. This allows the client to filter the servers it is interested in based on its permissions or other criteria. Only present if it's a MCP client.
 
 For `PUBLISH` messages, the following user properties **MUST** be set:
 - `MCP-COMPONENT-TYPE`: `mcp-client` or `mcp-server`.
