@@ -61,11 +61,12 @@ The QoS level for all PUBLISH and SUBSCRIBE messages **MUST** be 1.
 
 For `CONNECT` messages, the following user properties **MUST** be set:
 - `MCP-COMPONENT-TYPE`: `mcp-client` or `mcp-server`.
+- `MCP-META`: A JSON object containing metadata about the MCP component, such as its version, implementation details, and location. This metadata can be used by the broker to suggest a server name to the MCP server or a server name filter to the MCP client.
 
 For `CONNACK` messages sent by the broker, the following user properties **MAY** be set:
 - `MCP-SERVER-NAME`: The broker suggested server name for the MCP server.
 - `MCP-AUTH-ROLE`: The broker suggested role for the MCP client, which is used for a role-based access control (RBAC) mechanism.
-- `MCP-SERVER_NAME-FILTERS`: A list of server name filters that the MCP client can use to subscribe to the server's presence topic. This is used for service discovery.
+- `MCP-SERVER_NAME-FILTERS`: The broker suggested server name filters. It's a JSON array of strings, each string is a MQTT topic filter that the MCP client can use to subscribe to the server's presence topic. This allows the client to filter the servers it is interested in based on its permissions or other criteria.
 
 For `PUBLISH` messages, the following user properties **MUST** be set:
 - `MCP-COMPONENT-TYPE`: `mcp-client` or `mcp-server`.
