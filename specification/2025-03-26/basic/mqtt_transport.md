@@ -155,7 +155,7 @@ The MCP server **MUST** publish a "server/online" notification to the service pr
 The "server/online" notification **SHOULD** provide only limited information about the server to avoid the message size being too large. The client can request more detailed information after initialization.
 
 - A brief description of the MCP server's functionality to help clients determine which MCP servers they need to call.
-- Some metadata, such as hints about the permissions required to access this MCP server, to help clients quickly assess whether they have access.
+- Some metadata, such as roles and permissions, to help clients understand the access control policies of the MCP server. The `rbac` field in the metadata can include roles, each with a name, description, allowed methods, allowed tools, and allowed resources, which maybe used by the MQTT broker to implement role-based access control (RBAC) for the MCP server.
 
 ```json
 {
@@ -165,9 +165,31 @@ The "server/online" notification **SHOULD** provide only limited information abo
       "server_name": "example/server",
       "description": "This is a brief description about the functionalities provided by this MCP server to allow clients to choose as needed. If tools are provided, it explains what tools are available but does not include tool parameters to reduce message size.",
       "meta": {
-        // Any metadata, such as hints about the permissions required to access this MCP server
-        "authorization": {
-          "roles": ["admin", "user"]
+        "rbac": {
+          "roles": [
+            {
+              "name": "admin",
+              "description": "Administrator role with full access",
+              "allowed_methods": [
+                "ping", "tools/list", "tools/call", "resources/list", "resources/read", "resources/subscribe", "resources/unsubscribe"
+              ],
+              "allowed_tools": "all",
+              "allowed_resources": "all"
+            },
+            {
+              "name": "user",
+              "description": "User role with limited access",
+              "allowed_methods": [
+                "ping", "tools/list", "tools/call", "resources/list", "resources/read"
+              ],
+              "allowed_tools": [
+                "get_vehicle_status", "get_vehicle_location"
+              ],
+              "allowed_resources": [
+                "file:///vehicle/telemetry.data"
+              ]
+            }
+          ]
         }
       }
   }
