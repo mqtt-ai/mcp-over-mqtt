@@ -120,8 +120,8 @@ The Client ID of the MCP client, referred to as `mcp-client-id`, can be any stri
 
 | Topic Filter                                                       | Explanation                                                                                    |
 |--------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
-| `$mcp-server/capability/list-changed/+/{server-name-filter}`     | The capability change topic to receive capability list changed notification of the MCP server. |
-| `$mcp-server/capability/resource-updated/+/{server-name-filter}` | The resource update topic to receive resource update notification of the MCP server.           |
+| `$mcp-server/capability/list-changed/{server-id}/{server-name-filter}`     | The capability change topic to receive capability list changed notification of the MCP server. |
+| `$mcp-server/capability/resource-updated/{server-id}/{server-name-filter}` | The resource update topic to receive resource update notification of the MCP server.           |
 | `$mcp-server/presence/+/{server-name-filter}`                    | The presence topic to receive the presence message of the MCP server.                          |
 | `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name-filter}`          | The RPC topic to receive PRC requests, responses and notifications sent by the MCP server.     |
 
@@ -154,7 +154,7 @@ The MCP server **MUST** publish a "server/online" notification to the service pr
 
 The "server/online" notification **SHOULD** provide only limited information about the server to avoid the message size being too large. The client can request more detailed information after initialization.
 
-- A brief description of the MCP server's functionality to help clients determine which MCP servers they need to call.
+- A brief description of the MCP server's functionality to help clients determine which MCP servers they need to initialize.
 - Some metadata, such as roles and permissions, to help clients understand the access control policies of the MCP server. The `rbac` field in the metadata can include roles, each with a name, description, allowed methods, allowed tools, and allowed resources, which maybe used by the MQTT broker to implement role-based access control (RBAC) for the MCP server.
 
 ```json
@@ -329,9 +329,7 @@ After successful initialization, the client **MUST** send an initialized notific
 
 ## Capability List Changed
 
-Before initiating the Initialize request, the MCP client **MUST** subscribe to the MCP server's capability list changed topic: `$mcp-server/capability/list-changed/+/{server-name-filter}`, where `{server-name-filter}` is a filter for the server name.
-
-For example, during the service discovery phase, if a MCP server named `{server-type}/{sub-type}/{name}` is available, the client can subscribe to `$mcp-server/capability/list-changed/+/{server-type}/{sub-type}/#`, thereby subscribing to the capability list changed topic for all MCP servers of the `{sub-type}` type at once.
+Before initiating the Initialize request, the MCP client **MUST** subscribe to the MCP server's capability list changed topic: `$mcp-server/capability/list-changed/{server-id}/{server-name-filter}`, where `{server-name-filter}` is a filter for the server name.
 
 Before the MCP server responds to the initialization request, it **MUST** first subscribe to the MCP client's capability list changed topic: `$mcp-client/capability/list-changed/{mcp-client-id}`.
 
@@ -400,9 +398,14 @@ sequenceDiagram
 
 The server **MUST** connect with a will message to notify the client when it disconnects unexpectedly, the will topic is `$mcp-server/presence/{server-id}/{server-name}` and the payload is empty.
 
-Before a server disconnects, the server **MUST** send a empty message to the topic `$mcp-server/presence/{server-id}/{server-name}`.
+Before a MCP server disconnects from the MQTT broker, the server **MUST** send an empty message to the topic `$mcp-server/presence/{server-id}/{server-name}`.
 
-When the client receives the empty message on this topic, **MUST** disconnect and **MAY** send another initialization request using a different client-id.
+When the client receives an empty payload message on the rpc topic, it **MUST** consider the server to be offline and clear the cached `{server-id}` for that `{server-name}` and unsubscribe from the following topics:
+- `$mcp-server/capability/list-changed/{server-id}/{server-name-filter}`
+- `$mcp-server/capability/resource-updated/{server-id}/{server-name-filter}`
+- `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name-filter}`
+
+THe server cannot 'de-initialize' with a specified MCP client, it can only disconnect from the MQTT broker.
 
 ### Client Disconnect
 
@@ -410,11 +413,19 @@ The server **MUST** subscribe to the client's presence topic (`$mcp-client/prese
 
 The client **MUST** connect with a will message to notify the server when it disconnects unexpectedly, the will topic is `$mcp-client/presence/{mcp-client-id}` and the payload is a "disconnected" notification.
 
-Before the client disconnects, it **MUST** send a "disconnected" notification to the topic `$mcp-client/presence/{mcp-client-id}`.
+Before the client disconnects from the MQTT broker, it **MUST** send a "disconnected" notification to the topic `$mcp-client/presence/{mcp-client-id}`.
 
-After the server receives the "disconnected" notification, it **MUST** unsubscribe the `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name}` topic.
+The client may want to 'de-initialize' with a MCP server but still keep the connection with the MQTT broker, in this case it **MUST** send a "disconnected" notification to the rpc topic `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name}` and then unsubscribe from the following topics:
+- `$mcp-server/capability/list-changed/{server-id}/{server-name-filter}`
+- `$mcp-server/capability/resource-updated/{server-id}/{server-name-filter}`
+- `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name-filter}`
 
-The message format for the client's "disconnected" notification is:
+After the MCP server receives the "disconnected" notification, it **MUST** unsubscribe from the following topics:
+- `$mcp-client/capability/list-changed/{mcp-client-id}`
+- `$mcp-client/presence/{mcp-client-id}`
+- `$mcp-rpc-endpoint/{mcp-client-id}/{server-id}/{server-name}`
+
+The message format for the MCP client's "disconnected" notification is:
 
 ```json
 {
