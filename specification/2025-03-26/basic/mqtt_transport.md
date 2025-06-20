@@ -395,13 +395,25 @@ sequenceDiagram
 
 The server **MUST** connect with a will message to notify the client when it disconnects unexpectedly, the will topic is `$mcp-server/presence/{server-id}/{server-name}` and the payload is empty.
 
-Before a MCP server disconnects from the MQTT broker, the server **MUST** send an empty message to the topic `$mcp-server/presence/{server-id}/{server-name}`.
+Before a MCP server disconnects from the MQTT broker, the server **MUST** send an empty message to the presence topic `$mcp-server/presence/{server-id}/{server-name}`.
 
-When the client receives an empty payload message on the rpc topic, it **MUST** consider the server to be offline and clear the cached `{server-id}` for that `{server-name}` and unsubscribe from the following topics:
+The MCP server may want to 'de-initialize' with a MCP client but still keep the connection with the MQTT broker, in this case it **MUST** send a "disconnected" notification to the rpc topic `$mcp-rpc/{mcp-client-id}/{server-id}/{server-name}` and then unsubscribe from the following topics:
+- `$mcp-client/capability/{mcp-client-id}`
+- `$mcp-client/presence/{mcp-client-id}`
+- `$mcp-rpc/{mcp-client-id}/{server-id}/{server-name}`
+
+The message format for the MCP server's "disconnected" notification is:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/disconnected"
+}
+```
+
+When a MCP client receives an empty payload message on the server's presence topic or a "disconnected" notification on the rpc topic, it **MUST** consider the server to be offline and clear the cached `{server-id}` for that `{server-name}` and unsubscribe from the following topics:
 - `$mcp-server/capability/{server-id}/{server-name-filter}`
 - `$mcp-rpc/{mcp-client-id}/{server-id}/{server-name-filter}`
-
-THe server cannot 'de-initialize' with a specified MCP client, it can only disconnect from the MQTT broker.
 
 ### Client Disconnect
 
