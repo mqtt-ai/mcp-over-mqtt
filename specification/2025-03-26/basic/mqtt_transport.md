@@ -4,7 +4,7 @@ title: MQTT Transport
 
 # The MQTT Transport for MCP
 
-This specification defines the MQTT-specific requirements like MQTT topics, QoS levels, and client ID formats. It also outlines the lifecycle of the MQTT transport, including service discovery, initialization, capability list changes, resource updates, and shutdown procedures.
+This specification defines the MQTT-specific requirements like MQTT topics and client ID formats. It also outlines the lifecycle of the MQTT transport, including service discovery, initialization, capability list changes, resource updates, and shutdown procedures.
 
 It should be read in conjunction with the [MCP Specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/).
 
@@ -51,10 +51,6 @@ MCP over MQTT transmits messages through MQTT topics. This protocol includes the
 ## MQTT Protocol Version
 
 The MCP server and client **MUST** use MQTT Protocol version 5.0.
-
-## QoS
-
-The QoS level for all PUBLISH and SUBSCRIBE messages **MUST** be 1.
 
 ## User Property
 
