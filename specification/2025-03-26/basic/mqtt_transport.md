@@ -164,7 +164,9 @@ The "server/online" notification **SHOULD** provide only limited information abo
               "name": "admin",
               "description": "Administrator role with full access",
               "allowed_methods": [
-                "ping", "tools/list", "tools/call", "resources/list", "resources/read", "resources/subscribe", "resources/unsubscribe"
+                "notifications/initialized",
+                "ping", "tools/list", "tools/call", "resources/list", "resources/read",
+                "resources/subscribe", "resources/unsubscribe"
               ],
               "allowed_tools": "all",
               "allowed_resources": "all"
@@ -173,6 +175,7 @@ The "server/online" notification **SHOULD** provide only limited information abo
               "name": "user",
               "description": "User role with limited access",
               "allowed_methods": [
+                "notifications/initialized",
                 "ping", "tools/list", "tools/call", "resources/list", "resources/read"
               ],
               "allowed_tools": [
