@@ -1,12 +1,8 @@
----
-title: MQTT Transport
----
-
 # The MQTT Transport for MCP
 
 This specification defines the MQTT-specific requirements like MQTT topics and client ID formats. It also outlines the lifecycle of the MQTT transport, including service discovery, initialization, capability list changes, resource updates, and shutdown procedures.
 
-It should be read in conjunction with the [MCP Specification](https://spec.modelcontextprotocol.io/specification/2025-03-26/).
+It should be read in conjunction with the [MCP Specification](https://modelcontextprotocol.io/specification/2025-06-18).
 
 ## Terminology
 
@@ -33,11 +29,9 @@ It should be read in conjunction with the [MCP Specification](https://spec.model
 
 - **mcp-client-id**: The MQTT Client ID of the client. Any string except `/`, `+` and `#`. It must be globally unique and will be included in the topic. Each time an initialization request is made, a different client-id must be used.
 
-# MQTT Requirements and Conventions
-
 ## Message Topics
 
-MCP over MQTT transmits messages through MQTT topics. This protocol includes the following message topics:  
+MCP over MQTT transmits messages through MQTT topics. This protocol includes the following message topics:
 
 | Topic Name                       | Topic Name                                                          | Description                                                                        |
 |----------------------------------|---------------------------------------------------------------------|------------------------------------------------------------------------------------|
@@ -118,8 +112,9 @@ The Client ID of the MCP client, referred to as `mcp-client-id`, can be any stri
 | `$mcp-server/presence/+/{server-name-filter}`                    | The presence topic to receive the presence message of the MCP server.                          |
 | `$mcp-rpc/{mcp-client-id}/{server-id}/{server-name-filter}`          | The RPC topic to receive PRC requests, responses and notifications sent by the MCP server.     |
 
-::: info
-- The client **MUST** set the **No Local** option for the RPC topic (`$mcp-rpc/{mcp-client-id}/{server-id}/{server-name-filter}`) subscription to avoid receiving its own messages.
+::: tip Note
+
+The client **MUST** set the **No Local** option for the RPC topic (`$mcp-rpc/{mcp-client-id}/{server-id}/{server-name-filter}`) subscription to avoid receiving its own messages.
 :::
 
 ### MCP Client Publications
@@ -131,11 +126,10 @@ The Client ID of the MCP client, referred to as `mcp-client-id`, can be any stri
 | `$mcp-client/presence/{mcp-client-id}`               | Send disconnected notification for the MCP client.                 |
 | `$mcp-rpc/{mcp-client-id}/{server-id}/{server-name}` | The RPC topic to send RPC requests/responses to a specific server. |
 
-::: info
-- When connecting to the MQTT broker, the client **MUST** set `$mcp-client/presence/{mcp-client-id}` as the will topic with a "disconnected" notification as the payload to notify the server in case of an unexpected disconnection.
-:::
+::: tip Note
 
-# Lifecycle of MQTT Transport
+When connecting to the MQTT broker, the client **MUST** set `$mcp-client/presence/{mcp-client-id}` as the will topic with a "disconnected" notification as the payload to notify the server in case of an unexpected disconnection.
+:::
 
 ## Service Discovery
 
@@ -148,7 +142,8 @@ The MCP server **MUST** publish a "server/online" notification to the service pr
 The "server/online" notification **SHOULD** provide only limited information about the server to avoid the message size being too large. The client can request more detailed information after initialization.
 
 - A brief description of the MCP server's functionality to help clients determine which MCP servers they need to initialize.
-- Some metadata, such as roles and permissions, to help clients understand the access control policies of the MCP server. The `rbac` field in the metadata can include roles, each with a name, description, allowed methods, allowed tools, and allowed resources, which maybe used by the MQTT broker to implement role-based access control (RBAC) for the MCP server.
+- Some metadata, such as roles and permissions, to help clients understand the access control policies of the MCP server. The following keywords has been reserved:
+  + `rbac`, see [Authorization](#authorization) to learn more about how to use the `rbac` field for role-based access control.
 
 ```json
 {
@@ -157,37 +152,7 @@ The "server/online" notification **SHOULD** provide only limited information abo
   "params": {
       "server_name": "example/server",
       "description": "This is a brief description about the functionalities provided by this MCP server to allow clients to choose as needed. If tools are provided, it explains what tools are available but does not include tool parameters to reduce message size.",
-      "meta": {
-        "rbac": {
-          "roles": [
-            {
-              "name": "admin",
-              "description": "Administrator role with full access",
-              "allowed_methods": [
-                "notifications/initialized",
-                "ping", "tools/list", "tools/call", "resources/list", "resources/read",
-                "resources/subscribe", "resources/unsubscribe"
-              ],
-              "allowed_tools": "all",
-              "allowed_resources": "all"
-            },
-            {
-              "name": "user",
-              "description": "User role with limited access",
-              "allowed_methods": [
-                "notifications/initialized",
-                "ping", "tools/list", "tools/call", "resources/list", "resources/read"
-              ],
-              "allowed_tools": [
-                "get_vehicle_status", "get_vehicle_location"
-              ],
-              "allowed_resources": [
-                "file:///vehicle/telemetry.data"
-              ]
-            }
-          ]
-        }
-      }
+      "meta": {}
   }
 }
 ```
@@ -211,7 +176,7 @@ On the `$mcp-server/presence/{server-id}/{server-name}` topic:
 - When the client receives a `server/online` notification, it should record the `{server-id}` as one of the instances of that `{server-name}`.
 - When the client receives an empty payload message, it should clear the cached `{server-id}`. As long as any instance of that `{server-name}` is online, the client should consider the MCP server to be online.
 
-The message flow for service registration and unregistration is as follows: 
+The message flow for service registration and unregistration is as follows:
 
 ```mermaid
 sequenceDiagram
@@ -236,7 +201,7 @@ sequenceDiagram
 
 ## Initialization
 
-This section only describes the MQTT transport specific parts of the initialization phase, please see [Lifecycle](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle/#initialization) for more details.
+This section only describes the MQTT transport specific parts of the initialization phase, please see [Lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#initialization) for more details.
 
 The initialization phase **MUST** be the first interaction between client and server.
 
@@ -447,7 +412,7 @@ The client or the server **MAY** send `ping` requests to the server at any time 
 - If the client does not receive a `ping` response from the server within a reasonable time, it **MUST** send a "disconnected" notification to the topic `$mcp-client/presence/{mcp-client-id}` and disconnect itself.
 - If the server does not receive a `ping` response from the client within a reasonable time, it **MUST** send any other PRC requests to the client.
 
-For more information, see [Ping](https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/utilities/ping/).
+For more information, see [Ping](https://modelcontextprotocol.io/specification/2025-06-18/basic/utilities/ping).
 
 ## Timeouts
 
@@ -501,4 +466,66 @@ Example initialization error:
     }
   }
 }
+```
+
+## Authorization
+
+MCP over MQTT servers can support role-based access control (RBAC), restricting MCP clients' access to tools and resources by defining roles and their permissions.
+
+An MCP server may include an `rbac` field inside the `meta` object of the server/online notification; this `rbac` field must contain a list of roles. Each role defines a name, a description, allowed tools, and allowed resources.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/server/online",
+  "params": {
+      "server_name": "example/server",
+      "description": "some description",
+      "meta": {
+        "rbac": {
+          "roles": [
+            {
+              "name": "admin",
+              "description": "Administrator role with full access",
+              "allowed_tools": "all",
+              "allowed_resources": "all"
+            },
+            {
+              "name": "user",
+              "description": "User role with limited access",
+              "allowed_tools": [
+                "get_vehicle_status", "get_vehicle_location"
+              ],
+              "allowed_resources": [
+                "file:///vehicle/telemetry.data"
+              ]
+            }
+          ]
+        }
+      }
+  }
+}
+```
+
+The RBAC policy needs to be implemented on the MQTT broker. An MQTT broker that supports MCP RBAC must:
+
+- parse and process the `rbac` field in the `server/online` notification message reported by the MCP server.
+- allow users to assign specified roles to a specific MCP client or a group of MCP clients.
+
+If the user has assigned role information to an MCP client, then:
+
+1. The MQTT broker must verify the client's permissions when the MCP client sends requests, ensuring it can only access allowed tools and resources.
+2. When the MCP client connects, the MQTT broker must pass the client's role information to the MCP client through the `MCP-RBAC` user property in the CONNACK message. The value of `MCP-RBAC` is a JSON array, where each element is a JSON object containing two fields: `server_name` and `role_name`. For example:
+
+```json
+[
+  {
+    "server_name": "example/server_a",
+    "role_name": "user"
+  },
+  {
+    "server_name": "example/server_b",
+    "role_name": "admin"
+  }
+]
 ```

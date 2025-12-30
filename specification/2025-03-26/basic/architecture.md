@@ -1,7 +1,3 @@
----
-title: MQTT Transport
----
-
 # Architecture
 
 ## Core Components of the MQTT Transport
