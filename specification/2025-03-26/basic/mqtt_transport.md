@@ -145,7 +145,7 @@ The format of the "server/online" notification:
 
 - A brief description of the MCP server's functionality to help clients determine which MCP servers they need to initialize.
 - An optional `rbac` field, see [Authorization](#authorization) to learn more about how to use the `rbac` field for role-based access control.
-- An optional `dataReporting` field to specify the schema for data reporting. See [Data Reporting](#data-reporting) for more information.
+- An optional `dataList` field to specify a list of schemas for data reporting. See [Data Reporting](#data-reporting) for more information.
 - An optional `meta` field to provide additional metadata about the MCP server.
 
 ```json
@@ -155,7 +155,7 @@ The format of the "server/online" notification:
   "params": {
       "description": "This is a brief description about the functionalities provided by this MCP server to allow clients to choose as needed. If tools are provided, it explains what tools are available but the detailed schema of the tools should be fetched by the tools/list request.",
       "rbac": {},
-      "dataReporting": [],
+      "dataList": [],
       "meta": {}
   }
 }
@@ -366,14 +366,14 @@ Data reporting is a feature unique to MCP over MQTT, designed specifically for I
 
 ### Data Reporting Schema
 
-The data reporting schema must be included in the `params.dataReporting` field of the `notifications/server/online` notification, formatted as an array of objects containing `name`, `description`, and `schema` fields:
+The data reporting schema must be included in the `params.dataList` field of the `notifications/server/online` notification, formatted as an array of objects containing `name`, `description`, and `schema` fields:
 
 ```json
 {
   "jsonrpc": "2.0",
   "method": "notifications/server/online",
   "params": {
-    "dataReporting": [
+    "dataList": [
       {
         "name": <schemaName>,
         "description": <description>,
@@ -388,14 +388,14 @@ Here, `name` can be any string except `/`, `+`, and `#`, and `schema` is a JSON 
 
 ### Data Reporting Topic and Message Format
 
-After sending the `notifications/server/online` notification, the MCP server can publish data reports at any time to the topic `$mcp-server/dataReporting/{schema-name}/{server-id}/{server-name}`, where `{schema-name}` is the name of the reported data schema.
+After sending the `notifications/server/online` notification, the MCP server can publish data reports at any time to the topic `$mcp-server/data/{schema-name}/{server-id}/{server-name}`, where `{schema-name}` is the name of the reported data schema.
 
 The MQTT payload format for data reporting is:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "notifications/dataReporting",
+  "method": "notifications/data",
   "params": {
     "data": <data>
   }
@@ -415,7 +415,7 @@ First, the MCP server (device side) need to include a schema named `temperature`
   "jsonrpc": "2.0",
   "method": "notifications/server/online",
   "params": {
-    "dataReporting": [
+    "dataList": [
       {
         "name": "temperature",
         "description": "The temperature in Celsius",
@@ -430,19 +430,19 @@ First, the MCP server (device side) need to include a schema named `temperature`
 }
 ```
 
-At any time thereafter, the MCP server can publish temperature changes to the topic `$mcp-server/dataReporting/temperature/{server-id}/{server-name}` with the following payload:
+At any time thereafter, the MCP server can publish temperature changes to the topic `$mcp-server/data/temperature/{server-id}/{server-name}` with the following payload:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "method": "notifications/dataReporting",
+  "method": "notifications/data",
   "params": {
     "data": 22.5
   }
 }
 ```
 
-When the MCP client receives the `notifications/server/online` notification, it should subscribe to the topic `$mcp-server/dataReporting/temperature/{server-id}/{server-name}` and create a database table for the `temperature` schema. Upon receiving data reporting notifications, the client stores the data in the table for subsequent analysis.
+When the MCP client receives the `notifications/server/online` notification, it should subscribe to the topic `$mcp-server/data/temperature/{server-id}/{server-name}` and create a database table for the `temperature` schema. Upon receiving data reporting notifications, the client stores the data in the table for subsequent analysis.
 
 ```mermaid
 sequenceDiagram
