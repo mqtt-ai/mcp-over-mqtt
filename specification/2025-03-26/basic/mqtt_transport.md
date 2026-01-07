@@ -54,7 +54,7 @@ For `CONNECT` messages, the following user properties **MUST** be set:
 
 For `CONNACK` messages sent by the broker, the following user properties **MAY** be set:
 - `MCP-SERVER-NAME`: The broker suggested server name for the MCP server. Only present if it's a MCP server.
-- `MCP-RBAC`: A JSON array of server names and its corresponding role names, which can be used by the MCP client to determine the roles it has for the MCP server. Each element in the array is a JSON object with two fields: `server_name` and `role_name`. Only present if it's a MCP client.
+- `MCP-RBAC`: A JSON array of server names and its corresponding role names, which can be used by the MCP client to determine the roles it has for the MCP server. Each element in the array is a JSON object with two fields: `serverName` and `roleName`. Only present if it's a MCP client.
 - `MCP-SERVER-NAME-FILTERS`: The broker suggested server name filters. It's a JSON array of strings, each string is a MQTT topic filter that the MCP client can use to subscribe to the server's presence topic. This allows the client to filter the servers it is interested in based on its permissions or other criteria. Only present if it's a MCP client.
 
 For `PUBLISH` messages, the following user properties **MUST** be set:
@@ -133,31 +133,35 @@ When connecting to the MQTT broker, the client **MUST** set `$mcp-client/presenc
 
 ## Service Discovery
 
+Service discovery is a feature unique to MCP over MQTT; the official MCP protocol does not include service discovery. With this feature, MCP clients can dynamically discover and connect to available MCP servers.
+
 ### Service Registration
 
 After the MCP server starts, it registers its service with the MQTT broker. The presence topic for service discovery and registration is: `$mcp-server/presence/{server-id}/{server-name}`.
 
 The MCP server **MUST** publish a "server/online" notification to the service presence topic when they start, with the **RETAIN** flag set to `True`.
 
-The "server/online" notification **SHOULD** provide only limited information about the server to avoid the message size being too large. The client can request more detailed information after initialization.
+The format of the "server/online" notification:
 
 - A brief description of the MCP server's functionality to help clients determine which MCP servers they need to initialize.
-- Some metadata, such as roles and permissions, to help clients understand the access control policies of the MCP server. The following keywords has been reserved:
-  + `rbac`, see [Authorization](#authorization) to learn more about how to use the `rbac` field for role-based access control.
+- An optional `rbac` field, see [Authorization](#authorization) to learn more about how to use the `rbac` field for role-based access control.
+- An optional `dataList` field to specify a list of schemas for data reporting. See [Data Reporting](#data-reporting) for more information.
+- An optional `meta` field to provide additional metadata about the MCP server.
 
 ```json
 {
   "jsonrpc": "2.0",
   "method": "notifications/server/online",
   "params": {
-      "server_name": "example/server",
-      "description": "This is a brief description about the functionalities provided by this MCP server to allow clients to choose as needed. If tools are provided, it explains what tools are available but does not include tool parameters to reduce message size.",
+      "description": "This is a brief description about the functionalities provided by this MCP server to allow clients to choose as needed. If tools are provided, it explains what tools are available but the detailed schema of the tools should be fetched by the tools/list request.",
+      "rbac": {},
+      "dataList": [],
       "meta": {}
   }
 }
 ```
 
-More detailed information, such as parameter details of the tools, **SHOULD** only be fetched by the client when needed, by sending `**/list` requests to the server.
+Because the MCP has defined the `tools/list` request, the parameter details of the tools will not be included in the "server/online" notification. Instead, they **SHOULD** only be fetched by the client when needed, by sending `tools/list` requests to the MCP server.
 
 The client can subscribe to the `$mcp-server/presence/+/{server-name-filter}` topic at any time, where `{server-name-filter}` is a filter for the server name.
 
@@ -173,7 +177,7 @@ Before actively disconnecting from the MQTT broker, the server **MUST** send an 
 
 On the `$mcp-server/presence/{server-id}/{server-name}` topic:
 
-- When the client receives a `server/online` notification, it should record the `{server-id}` as one of the instances of that `{server-name}`.
+- When the client receives a `notifications/server/online` notification, it should record the `{server-id}` as one of the instances of that `{server-name}`.
 - When the client receives an empty payload message, it should clear the cached `{server-id}`. As long as any instance of that `{server-name}` is online, the client should consider the MCP server to be online.
 
 The message flow for service registration and unregistration is as follows:
@@ -353,6 +357,104 @@ sequenceDiagram
     MCP_Server -->> MCP_Client: Read Resource Response<br/>Topic: $mcp-rpc/{mcp-client-id}/{server-id}/{server-name}<br/>URI: {resource-uri}
 ```
 
+## Data Reporting
+
+Data reporting is a feature unique to MCP over MQTT, designed specifically for IoT scenarios that require real-time status updates. Similar to the [MCP resource subscription mechanism](https://modelcontextprotocol.io/specification/2025-11-25/server/resources#subscriptions), MCP over MQTT allows the MCP server to proactively report data changes to the MQTT broker. Unlike MCP resource subscriptions:
+
+- MCP over MQTT data reporting does not require the MCP client to send a subscription request to a specific MCP server in advance; the MCP client only needs to subscribe to the relevant data reporting topic.
+- MCP over MQTT requires the MCP server to include the schema in the `notifications/server/online` notification, so the MCP client can parse the reported data according to the schema.
+
+### Data Reporting Schema
+
+The data reporting schema must be included in the `params.dataList` field of the `notifications/server/online` notification, formatted as an array of objects containing `name`, `description`, and `schema` fields:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/server/online",
+  "params": {
+    "dataList": [
+      {
+        "name": <schemaName>,
+        "description": <description>,
+        "schema": <schema>
+      }
+    ]
+  }
+}
+```
+
+Here, `name` can be any string except `/`, `+`, and `#`, and `schema` is a JSON Schema describing the data structure.
+
+### Data Reporting Topic and Message Format
+
+After sending the `notifications/server/online` notification, the MCP server can publish data reports at any time to the topic `$mcp-server/data/{schema-name}/{server-id}/{server-name}`, where `{schema-name}` is the name of the reported data schema.
+
+The MQTT payload format for data reporting is:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/data",
+  "params": {
+    "data": <data>
+  }
+}
+```
+
+The content of the `data` field is defined by the specific schema.
+
+### Data Reporting Example
+
+In this example, we want to use an LLM to analyze temperature changes throughout the day and display them as a curve chart.
+
+First, the MCP server (device side) need to include a schema named `temperature` in the `notifications/server/online` notification, which is a simple number type:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/server/online",
+  "params": {
+    "dataList": [
+      {
+        "name": "temperature",
+        "description": "The temperature in Celsius",
+        "schema": {
+          "type": "number",
+          "minimum": -273.15,
+          "maximum": 1000
+        }
+      }
+    ]
+  }
+}
+```
+
+At any time thereafter, the MCP server can publish temperature changes to the topic `$mcp-server/data/temperature/{server-id}/{server-name}` with the following payload:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/data",
+  "params": {
+    "data": 22.5
+  }
+}
+```
+
+When the MCP client receives the `notifications/server/online` notification, it should subscribe to the topic `$mcp-server/data/temperature/{server-id}/{server-name}` and create a database table for the `temperature` schema. Upon receiving data reporting notifications, the client stores the data in the table for subsequent analysis.
+
+```mermaid
+sequenceDiagram
+    participant MCP_Server as MCP Server
+    participant MCP_Client as MCP Client
+
+    MCP_Server ->> MCP_Client: Register Service with<br/>Data Reporting Schema:<br/>{"name": "temperature",<br/>"schema": {"type": "number"}}
+    Note right of MCP_Client: Subscribe to temperature topic<br/>and create database table
+    MCP_Server ->> MCP_Client: Report the Temperature:<br/>{"data": 22.5}
+    Note right of MCP_Client: Insert the temperature<br/>into database
+```
+
 ## Shutdown
 
 ### Server Disconnect
@@ -472,60 +574,59 @@ Example initialization error:
 
 MCP over MQTT servers can support role-based access control (RBAC), restricting MCP clients' access to tools and resources by defining roles and their permissions.
 
-An MCP server may include an `rbac` field inside the `meta` object of the server/online notification; this `rbac` field must contain a list of roles. Each role defines a name, a description, allowed tools, and allowed resources.
+An MCP server may include an `rbac` field inside the `params` object of the server/online notification; this `rbac` field must contain a list of roles. Each role defines a name, a description, allowed tools, and allowed resources.
+
+The following is an example of the `rbac` field:
 
 ```json
 {
   "jsonrpc": "2.0",
   "method": "notifications/server/online",
   "params": {
-      "server_name": "example/server",
-      "description": "some description",
-      "meta": {
-        "rbac": {
-          "roles": [
-            {
-              "name": "admin",
-              "description": "Administrator role with full access",
-              "allowed_tools": "all",
-              "allowed_resources": "all"
-            },
-            {
-              "name": "user",
-              "description": "User role with limited access",
-              "allowed_tools": [
-                "get_vehicle_status", "get_vehicle_location"
-              ],
-              "allowed_resources": [
-                "file:///vehicle/telemetry.data"
-              ]
-            }
+    "description": "some description",
+    "rbac": {
+      "roles": [
+        {
+          "name": "admin",
+          "description": "Administrator role with full access",
+          "allowedTools": "all",
+          "allowedResources": "all"
+        },
+        {
+          "name": "user",
+          "description": "User role with limited access",
+          "allowedTools": [
+            "getVehicleStatus", "getVehicleLocation"
+          ],
+          "allowedResources": [
+            "file:///vehicle/telemetry.data"
           ]
         }
-      }
+      ]
+    }
   }
 }
 ```
 
 The RBAC policy needs to be implemented on the MQTT broker. An MQTT broker that supports MCP RBAC must:
 
-- parse and process the `rbac` field in the `server/online` notification message reported by the MCP server.
+- parse and process the `rbac` field in the `notifications/server/online` notification message reported by the MCP server.
 - allow users to assign specified roles to a specific MCP client or a group of MCP clients.
 
 If the user has assigned role information to an MCP client, then:
 
 1. The MQTT broker must verify the client's permissions when the MCP client sends requests, ensuring it can only access allowed tools and resources.
-2. When the MCP client connects, the MQTT broker must pass the client's role information to the MCP client through the `MCP-RBAC` user property in the CONNACK message. The value of `MCP-RBAC` is a JSON array, where each element is a JSON object containing two fields: `server_name` and `role_name`. For example:
+2. When the MCP client connects, the MQTT broker must pass the client's role information to the MCP client through the `MCP-RBAC` user property in the CONNACK message. The value of `MCP-RBAC` is a JSON array, where each element is a JSON object containing two fields: `serverName` and `roleName`. For example:
 
 ```json
 [
   {
-    "server_name": "example/server_a",
-    "role_name": "user"
+    "serverName": "example/server_a",
+    "roleName": "user"
   },
   {
-    "server_name": "example/server_b",
-    "role_name": "admin"
+    "serverName": "example/server_b",
+    "roleName": "admin"
   }
 ]
 ```
